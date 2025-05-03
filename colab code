@@ -1,0 +1,50 @@
+# Install PySpark to use Spark in Colab
+!pip install pyspark
+
+# Import necessary libraries for Spark
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import desc
+
+# Start Spark session
+spark = SparkSession.builder.appName("BigDataAnalytics").getOrCreate()
+
+# Upload ZIP file containing the CSV using Colab's file upload tool
+from google.colab import files
+uploaded = files.upload()  # Select and upload ZIP file here
+
+# Get the filename of the uploaded ZIP file
+filename = list(uploaded.keys())[0]
+
+# Install zipfile36 library for ZIP file extraction
+!pip install zipfile36
+from zipfile import ZipFile
+
+# Extract the CSV file from the uploaded ZIP archive
+with ZipFile(filename, 'r') as zip_ref:
+    # Assuming only one CSV file in the archive, extract it
+    csv_filename = [f for f in zip_ref.namelist() if f.endswith('.csv')][0]  
+    zip_ref.extract(csv_filename)
+
+# Load the extracted CSV file into a Spark DataFrame
+df = spark.read.csv(csv_filename, header=True, inferSchema=True)
+
+# Display schema and total number of rows
+df.printSchema()
+print(f"Total rows: {df.count()}")
+
+# Show first 5 rows for preview
+df.show(5)
+
+# Count unique values in the first column
+first_column = df.columns[0]  # Get the name of the first column
+unique_count = df.select(first_column).distinct().count()
+print(f"Unique values in '{first_column}':", unique_count)
+
+# Show top 5 most frequent values in the first column
+df.groupBy(first_column).count().orderBy(desc('count')).show(5)
+
+# Display summary statistics for all numeric columns
+df.describe().show()
+
+# Stop Spark session to free resources
+spark.stop()
